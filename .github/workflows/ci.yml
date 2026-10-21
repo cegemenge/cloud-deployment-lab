@@ -1,0 +1,54 @@
+name: Test and build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t cloud-lab-test .
+
+      - name: Start API
+        run: docker run -d --name api-test -p 127.0.0.1:8000:8000 cloud-lab-test
+
+      - name: Check health endpoint
+        run: |
+          python3 - <<'PY'
+          import json
+          import time
+          from urllib.request import urlopen
+
+          for attempt in range(30):
+              try:
+                  with urlopen(
+                      "http://127.0.0.1:8000/health", timeout=2
+                  ) as response:
+                      assert response.status == 200
+                      assert json.load(response) == {"status": "ok"}
+                  print("Health check passed")
+                  break
+              except Exception:
+                  if attempt == 29:
+                      raise
+                  time.sleep(1)
+          PY
+
+      - name: Show container logs
+        if: always()
+        run: docker logs api-test
+
+      - name: Stop container
+        if: always()
+        run: docker rm -f api-test
