@@ -5,8 +5,7 @@ app = FastAPI(title="Cloud Deployment Lab")
 
 @app.get("/")
 def home():
-    return {"message": "My first API is running!"}
-
+    return {"message": "My cloud deployment pipeline is working!"}
 
 @app.get("/health")
 def health():
